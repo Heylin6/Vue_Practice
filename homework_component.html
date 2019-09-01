@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>作業練習：元件變換</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="images/favicon.ico" rel="shortcut icon">
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/stylesheets/all.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.0.8/js/solid.js" integrity="sha384-+Ga2s7YBbhOD6nie0DzrZpJes+b2K1xkpKxTFFcx59QmVPaSA8c7pycsNaFwUK6l" crossorigin="anonymous"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.0.8/js/regular.js" integrity="sha384-t7yHmUlwFrLxHXNLstawVRBMeSLcXTbQ5hsd0ifzwGtN7ZF7RZ8ppM7Ldinuoiif" crossorigin="anonymous"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.0.8/js/fontawesome.js" integrity="sha384-7ox8Q2yzO/uWircfojVuCQOZl+ZZBg2D2J5nkpLqzH1HY0C1dHlTKIbpRz/LG23c" crossorigin="anonymous"></script>    <script src="/javascripts/vendor.js"></script>
+
+  </head>
+  
+  <body class="bg-lighter">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary"></nav>
+    <div class="container my-5">
+      <div class="row">
+        
+          <div class="col-md-3"></div>
+        
+        <div class="col-md-9 post">      
+          <!-- 練習開始 -->
+          <h1 class="mt-0 text-muted">作業練習：元件變換</h1>
+          
+<h3>模板練習作業：Ajax 資料內容呈現</h3>
+<p>本作業一定要用到元件。</p>
+<div class="alert alert-secondary">
+  <p>提示：</p>
+  <ol class="mb-0">
+    <li>將資料內容透過 "元件" 呈現</li>
+    <li>製作城市過濾選項</li>
+    <li>將內層資料透過 emit 傳遞到外層 (作為另一個關注城市的呈現)</li>
+    <li>依據不同污染呈現不同色彩</li>
+    <li>加分題：透過 localStorage 儲存上次關注的城市</li>
+  </ol>
+</div>
+
+<div id="app">
+  <select name="" id=""  class="form-control mb-3" v-model="filter">
+    <option value="" disabled>--- 請選擇城市 ---</option>
+    <option value="all">所有城市</option>
+    <option v-for="county in location" :value="county">{{ county }}</option>
+  </select>
+
+      <div>
+        <h4>關注城市</h4>
+        <div class="card-columns">
+          <aircards 
+            :datacontent="item" 
+            v-for="(item, index) in stared" 
+            @followchange="unFollow(item, index)"
+            :key="index">
+          </aircards>
+        </div>
+      </div>
+
+      <div>
+      <h4>城市列表</h4>
+      <div class="card-columns">
+        <aircards 
+          :datacontent="item" 
+          v-for="(item, index) in airInit" 
+          @followchange="addFollow(item, index)"
+          :key="index">
+        </aircards>
+      </div>
+    </div>
+</div>
+
+<script type="text/x-template" id="airComponent">
+  
+  <div class="card">
+      <div class="card-header">{{ datacontent.County }} - {{ datacontent.SiteName }}
+        <a href="#" class="float-right" @click.prevent="cardfollow">
+          <i class="far fa-star"></i>
+        </a>
+      </div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li>AQI 指數: {{ datacontent.County }}</li>
+          <li>PM2.5: {{ datacontent['PM2.5'] }}</li>
+          <li>說明: {{ datacontent.Status }}</li>
+        </ul>
+      {{ datacontent.PublishTime }}
+      </div>
+  </div>
+
+  </script>
+
+
+  </script>
+
+<script>
+
+//一般模組
+Vue.component('aircards', {
+  props: ['datacontent'],
+  template: '#airComponent',
+  methods:{
+    cardfollow(){
+      //內部模組按下關注
+      //要傳至外層stared
+      //前者為事件名稱
+      //後者為參數
+
+      this.$emit('followchange',this.datacontent);
+      //this.$emit('star-change', this.dataName);
+    }
+  }
+});
+
+
+
+// API 來源
+// https://opendata.epa.gov.tw/Data/Contents/AQI/
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    data: [],
+    location: [],
+    stared: [],
+    filter: 'all',
+  },
+  mounted(){
+    //載入ajax到data
+    this.getData();
+  },
+  methods: {
+    getData() {
+      const vm = this;
+      const api = 'http://opendata2.epa.gov.tw/AQI.json';
+
+      // 使用 jQuery ajax
+      $.get(api).then(function( response ) {
+        //放入撈回來的資料
+        vm.data = response;
+        //撈回來的資料抓出各地名
+        vm.data.forEach(function(item){
+          if(vm.data.indexOf(item.County) === -1){
+            vm.location.push(item.County);
+          }
+        });
+        //console.log('1 : '+vm.location);
+        vm.location = vm.location.filter((val,index,arr) => 
+                                            arr.indexOf(val)===index);
+        //console.log('2 : '+vm.location);
+        //vm.stared= response;
+        //console.log(response)
+      });
+    }
+  },
+  computed: {
+    airInit(){
+      let vm=this;
+      if(vm.filter === 'all'){
+        return vm.data;
+      }
+      else{
+        return vm.data.filter((item,index) => 
+                                item.County===vm.filter);
+      }
+    },
+    unFollow(item,index){
+      let vm=this;
+      //抓出當下索引位子
+      vm.data.splice(index, 1);
+      //比對一下stared陣列 裡面沒該值的話就加進去
+      if(vm.data.indexOf(item)===-1)
+      {
+        vm.stared.push(item);
+      }
+      //存入快取
+      //console.log('unfollow  JSON: '+JSON.stringify(vm.stared));
+      localStorage.setItem('County', JSON.stringify(vm.stared));
+    },
+    addFollow(item,index){
+      console.log('item: '+item);
+      console.log('index : '+index);
+
+      let vm=this;
+      vm.data.splice(index, 1);      
+      //比對一下stared陣列 裡面沒該值的話就加進去
+      if(vm.data.indexOf(item)===-1)
+      {
+        vm.stared.push(item);
+      }
+      //存入快取
+      console.log('addfollow  JSON: '+JSON.stringify(vm.stared));
+      localStorage.setItem('County', JSON.stringify(vm.stared));
+    }
+  }
+});
+</script>
+
+<!--
+{
+  "SiteName":"基隆",
+  "County":"基隆市",
+  "AQI":"18",
+  "Pollutant":"",
+  "Status":"良好",
+  "SO2":"1.5",
+  "CO":"0.09",
+  "CO_8hr":"0.1",
+  "O3":"8.4",
+  "O3_8hr":"8",
+  "PM10":"16",
+  "PM2.5":"5",
+  "NO2":"2.6",
+  "NOx":"4.6",
+  "NO":"2",
+  "WindSpeed":"2.1",
+  "WindDirec":"104",
+  "PublishTime":"2019-08-28 23:00",
+  "PM2.5_AVG":"6",
+  "PM10_AVG":"15",
+  "SO2_AVG":"1",
+  "Longitude":"121.760056",
+  "Latitude":"25.129167",
+  "SiteId":"1"
+}
+-->
+
+
+<!-- 
+狀態對應表
+'良好',
+'status-aqi2' '普通',
+'status-aqi3' '對敏感族群不健康',
+'status-aqi4' '對所有族群不健康',
+'status-aqi5' '非常不健康',
+'status-aqi6' '危害'
+--> 
+<style>
+.status-aqi2 {
+  background-color: #ffff00;
+}
+.status-aqi3 {
+  background-color: #ff7e00;
+}
+.status-aqi4 {
+  background-color: #ff0000;
+}
+.status-aqi5 {
+  background-color: #8f3f97;
+}
+.status-aqi6 {
+  background-color: #7e0023;
+}
+</style>
+
+ 
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
